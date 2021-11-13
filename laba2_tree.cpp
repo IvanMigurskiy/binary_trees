@@ -14,7 +14,6 @@ int main()
     StrCompare* s = new StrCompare;
     IntCompare* i = new IntCompare;
 
-    //bin_tree<int, int> btr(i);
     relation<int, int> btr;
 
     try
