@@ -171,11 +171,9 @@ public:
     tree_exception(const std::string& msg, const int code) { this->msg = msg; this->code = code; }
     tree_exception(const tree_exception& ex) { this->msg = ex.msg; this->code = ex.code; }
 
-    tree_exception(tree_exception&& ex) { this->msg = ex.msg; this->code = ex.code; }
+    virtual const char* what() { return msg.c_str(); }
 
-    const char* what() { return msg.c_str(); }
-
-    int cod() { return code; }
+    virtual int cod() { return code; }
 };
 
 class bt_exep : public tree_exception
@@ -186,7 +184,6 @@ protected:
 public:
     bt_exep(const std::string& msg, const int code): tree_exception(msg, code) {}
     bt_exep(const bt_exep& ex) : tree_exception(ex) {}
-    bt_exep(bt_exep&& ex) : tree_exception(ex) {}
 };
 
 class AVL_exep : public tree_exception
@@ -197,7 +194,6 @@ protected:
 public:
     AVL_exep(const std::string& msg, const int code) : tree_exception(msg, code) {}
     AVL_exep(const AVL_exep& ex) : tree_exception(ex) {}
-    AVL_exep(AVL_exep&& ex) : tree_exception(ex) {}
 };
 
 class splay_exep : public tree_exception
@@ -208,7 +204,6 @@ protected:
 public:
     splay_exep(const std::string& msg, const int code) : tree_exception(msg, code) {}
     splay_exep(const splay_exep& ex) : tree_exception(ex) {}
-    splay_exep(splay_exep&& ex) : tree_exception(ex) {}
 };
 
 class RB_exep : public tree_exception
@@ -219,7 +214,6 @@ protected:
 public:
     RB_exep(const std::string& msg, const int code) : tree_exception(msg, code) {}
     RB_exep(const RB_exep& ex) : tree_exception(ex) {}
-    RB_exep(RB_exep&& ex) : tree_exception(ex) {}
 };
 
 class t23_exep : public tree_exception
@@ -228,9 +222,8 @@ protected:
     tree_exception::msg;
     tree_exception::code;
 public:
-    t23_exep(const std::string& msg, const int code) : tree_exception(msg, code) {}
+    t23_exep(const std::string& msg, const int code):tree_exception(msg, code) { }
     t23_exep(const t23_exep& ex) : tree_exception(ex) {}
-    t23_exep(t23_exep&& ex) : tree_exception(ex) {}
 };
 
 
@@ -250,7 +243,7 @@ protected:
     virtual one<key, val>* add(const key& k, const val& v) = 0;
     virtual void edit(const key& k, const val& v) = 0;
     virtual one<key, val>* del(one<key, val>* p, const key& k) = 0;
-    virtual val& find(const key& k) = 0;
+    virtual val find(const key& k) = 0;
 
 
 public:
@@ -260,7 +253,7 @@ public:
     virtual base_tree& operator+=(const std::pair<key, val>& o) = 0;
     virtual base_tree& operator*=(const std::pair<key, val>& o) = 0;
     virtual base_tree& operator-=(const key& k) = 0;
-    virtual val& operator[](const key& k) = 0;
+    virtual val operator[](const key& k) = 0;
 
     virtual void trace_pre(val(*action)(const val&, const key&, const size_t)) = 0;
     virtual void trace_inf(val(*action)(const val&, const key&, const size_t)) = 0;
@@ -322,7 +315,7 @@ protected:
     virtual one<key, val>* add(const key& k, const val& v);
     virtual void edit(const key& k, const val& v);
     virtual one<key, val>* del(one<key, val>* p, const key& k);
-    virtual val& find(const key& k);
+    virtual val find(const key& k);
 
     virtual void trace_del(one<key, val>* node);
     virtual void trace_copy(one<key, val>* source, one<key, val>* destination);
@@ -340,7 +333,7 @@ public:
     bin_tree& operator+=(const std::pair<key, val>& o) {add(o.first, o.second);return *this;}
     bin_tree& operator*=(const std::pair<key, val>& o) {edit(o.first, o.second);return *this;}
     bin_tree& operator-=(const key& k) {top = del(top, k);return *this;}
-    val& operator[](const key& k) {return this->find(k);}
+    val operator[](const key& k) {return this->find(k);}
 
     void trace_pre(val(*action)(const val&, const key&, const size_t));
     void trace_inf(val(*action)(const val&, const key&, const size_t));
@@ -380,8 +373,8 @@ one<key, val>* bin_tree<key, val>::add(const key& k, const val& v)
     while (now != nullptr)
     {
         if (comp->compare(k, now->k) == 0)
-            throw bt_exep(std::string("Key already exist."), 1);
-        else if (comp->compare(k, now->k) == -1)
+            throw bt_exep(std::string("Key already exist (in function add bin_tree)."), 1);
+        else if (comp->compare(k, now->k) < 0)
         {
             if (now->left == nullptr)
             {
@@ -393,7 +386,7 @@ one<key, val>* bin_tree<key, val>::add(const key& k, const val& v)
             else
                 now = now->left;
         }
-        else if (comp->compare(k, now->k) == 1)
+        else if (comp->compare(k, now->k) > 0)
         {
             if (now->right == nullptr)
             {
@@ -425,13 +418,13 @@ void bin_tree<key, val>::edit(const key& k, const val& v)
             *now->v = v;
             return;
         }
-        else if (comp->compare(k, now->k) == -1)
+        else if (comp->compare(k, now->k) < 0)
             now = now->left;
-        else if (comp->compare(k, now->k) == 1)
+        else if (comp->compare(k, now->k) > 0)
             now = now->right;
     }
 
-    throw bt_exep(std::string("Key not found."), 0);
+    throw bt_exep(std::string("Key not found (in function edit bin_tree)."), 0);
 }
 
 
@@ -439,12 +432,12 @@ template <class key, class val>
 one<key, val>* bin_tree<key, val>::del(one<key, val>* p, const key& k)
 {
     if (p == nullptr)
-        throw bt_exep(std::string("Key not found."), 0);
+        throw bt_exep(std::string("Key not found (in function del bin_tree)."), 0);
 
 
-    if (comp->compare(k, p->k) == -1)
+    if (comp->compare(k, p->k) < 0)
         p->left = del(p->left, k);
-    else if (comp->compare(k, p->k) == 1)
+    else if (comp->compare(k, p->k) > 0)
         p->right = del(p->right, k);
     else
     {
@@ -464,7 +457,7 @@ one<key, val>* bin_tree<key, val>::del(one<key, val>* p, const key& k)
 
 
 template <class key, class val>
-val& bin_tree<key, val>::find(const key& k)
+val bin_tree<key, val>::find(const key& k)
 {
     one<key, val>* now = top;
 
@@ -472,13 +465,13 @@ val& bin_tree<key, val>::find(const key& k)
     {
         if (comp->compare(k, now->k) == 0)
             return *now->v;
-        else if (comp->compare(k, now->k) == -1)
+        else if (comp->compare(k, now->k) < 0)
             now = now->left;
-        else if (comp->compare(k, now->k) == 1)
+        else if (comp->compare(k, now->k) > 0)
             now = now->right;
     }
 
-    throw bt_exep(std::string("Key not found."), 0);
+    throw bt_exep(std::string("Key not found (in function find bin_tree)."), 0);
 }
 
 
@@ -623,16 +616,6 @@ private:
     one<key, val>* findmin(one<key, val>* p);
     one<key, val>* removemin(one<key, val>* p);
 
-
-
-protected:
-
-    //void add(const key& k, const val& v);
-    //void edit(const key& k, const val& v);
-    //virtual void bin_tree<key, val>::trace_del(one<key, val> *node);
-    //bool trace_copy(one_h<key, val> *source, one_h<key, val> *destination);
-
-
 public:
     bin_tree<key, val>::top;
     bin_tree<key, val>::comp;
@@ -699,8 +682,8 @@ one<key, val>* AVL_tree<key, val>::add(one<key, val>* p, const key& k, const val
     }
 
     if (comp->compare(k, p->k) == 0)
-        throw AVL_exep(std::string("Key already exist."), 1);
-    else if (comp->compare(k, p->k)==-1)
+        throw AVL_exep(std::string("Key already exist (in function add AVL_tree)."), 1);
+    else if (comp->compare(k, p->k)<0)
         p->left = add(p->left, k, v);
     else
         p->right = add(p->right, k, v);
@@ -728,9 +711,9 @@ template <class key, class val>
 one<key, val>* AVL_tree<key, val>::del(one<key, val>* p, const key& k)
 {
     if (!p) return 0;
-    if (comp->compare(k, p->k) == -1)
+    if (comp->compare(k, p->k) < 0)
         p->left = del(p->left, k);
-    else if (comp->compare(k, p->k) == 1)
+    else if (comp->compare(k, p->k) > 0)
         p->right = del(p->right, k);
     else
     {
@@ -762,7 +745,7 @@ private:
 
 protected:
 
-    virtual val& find(const key& k);
+    virtual val find(const key& k);
 
 public:
     bin_tree<key, val>::top;
@@ -799,11 +782,21 @@ public:
 
 
 template <class key, class val>
-val& splay_tree<key, val>::find(const key& k)
+val splay_tree<key, val>::find(const key& k)
 {
-    top = splay(top, k);;
-    if(top->k != k)
-        throw splay_exep(std::string("Key not found."), 0);
+    one<key, val>* node = top;
+    whiel(top)
+    {
+        if (comp->compare(k, p->k) < 0)
+            node = p->left;
+        else if (comp->compare(k, p->k) > 0)
+            node = p->right;
+        else
+            break;
+    }
+    if(!node)
+        throw splay_exep(std::string("Key not found (in function find AVL_tree)."), 0);
+    top = splay(top, k);
     return *top->v;
 }
 
@@ -814,16 +807,16 @@ one<key, val>* splay_tree<key, val>::splay(one<key, val>* root, const key& k)
     if (root == nullptr || comp->compare(root->k, k)==0 )
         return root;
 
-    if (comp->compare(root->k, k) == 1 )
+    if (comp->compare(root->k, k) > 0 )
     {
         if (root->left == nullptr) return root;
 
-        if (comp->compare(root->left->k , k)==1 )
+        if (comp->compare(root->left->k , k)>0 )
         {
             root->left->left = splay(root->left->left, k);
             root = rotateright(root);
         }
-        else if (comp->compare(root->left->k, k)==-1 )
+        else if (comp->compare(root->left->k, k) < 0)
         {
             root->left->right = splay(root->left->right, k);
             if (root->left->right != nullptr)
@@ -835,14 +828,14 @@ one<key, val>* splay_tree<key, val>::splay(one<key, val>* root, const key& k)
     {
         if (root->right == nullptr) return root;
 
-        if (comp->compare(root->right->k, k)==1)
+        if (comp->compare(root->right->k, k) > 0)
         {
             root->right->left = splay(root->right->left, k);
 
             if (root->right->left != nullptr)
                 root->right = rotateright(root->right);
         }
-        else if (comp->compare(root->right->k, k)==-1 )
+        else if (comp->compare(root->right->k, k) < 0 )
         {
             root->right->right = splay(root->right->right, k);
             root = rotateleft(root);
@@ -861,9 +854,6 @@ class RBtree : public bin_tree<key, val> {
 private:
     one<key, val>* rotateright(one<key, val>* p) { one<key, val>* q = p->left; p->left = q->right; q->right = p; return q; }
     one<key, val>* rotateleft(one<key, val>* q) { one<key, val>* p = q->right; q->right = p->left; p->left = q; return p; }
-    //virtual one<key, val>* add(one<key, val>* p, const key& k, const val& v);
-    //virtual one<key, val>* del(one<key, val>* p, const key& k);
-
 
     void BalanceInsert(one<key, val>** root);
     bool BalanceRemove1(one<key, val>** root);
@@ -1003,12 +993,12 @@ bool RBtree<key, val>::Remove(one<key, val>** root, const key& k)
 {
     one<key, val>* t, * node = *root;
     if (!node)
-        throw RB_exep(std::string("Key not found."), 0);
-    if (comp->compare(node->k, k) == -1) {
+        throw RB_exep(std::string("Key not found (in function Remove RB_tree)."), 0);
+    if (comp->compare(node->k, k)  < 0) {
         if (Remove(&node->right, k))
             return BalanceRemove2(root);
     }
-    else if (comp->compare(node->k, k) == 1) {
+    else if (comp->compare(node->k, k) > 0) {
         if (Remove(&node->left, k))
             return BalanceRemove1(root);
     }
@@ -1061,7 +1051,7 @@ void RBtree<key, val>::BalanceInsert(one<key, val>** root)
     p1 = node->left;
     p2 = node->right;
     if (p1 && p1->red) {
-        px2 = p1->right;				// задача найти две рядом стоящие крастне вершины
+        px2 = p1->right;				// задача найти две рядом стоящие крастные вершины
         if (px2 && px2->red) p1 = node->left = rotateleft(p1);
         px1 = p1->left;
         if (px1 && px1->red) {
@@ -1109,8 +1099,8 @@ bool RBtree<key, val>::Insert(const key &k, const val& v, one<key, val>** root)
     }
     else {
         if (comp->compare(k, node->k)==0 )
-            throw RB_exep(std::string("Key not found."), 0);
-        if (Insert(k, v, comp->compare(k, node->k) == -1 ? &node->left : &node->right)) 
+            throw RB_exep(std::string("Key not found (in function Insert RB_tree)."), 0);
+        if (Insert(k, v, comp->compare(k, node->k) < 0 ? &node->left : &node->right)) 
             return true;
         BalanceInsert(root);
     }
@@ -1162,7 +1152,7 @@ protected:
     virtual one<key, val>* add(const key& k, const val& v) { return nullptr; }
     virtual void edit(const key& k, const val& v);
     virtual one<key, val>* del(one<key, val>* p, const key& k) { return nullptr; }
-    virtual val& find(const key& k) { val a; return a; }
+    virtual val find(const key& k) { val a{ 0 }; return a; }
 
 public:
     Compare<key>* comp = nullptr;
@@ -1174,9 +1164,14 @@ public:
 
 
     virtual tree_23& operator+=(const std::pair<key, val>& o) { top = insert(top, o.first, o.second); return *this; }
-    virtual tree_23& operator*=(const std::pair<key, val>& o) { one<key, val>* p = search(top, o.first); if (!p) throw t23_exep(std::string("Key not found."), 0); edit(o.first, o.second); return *this; }
+    virtual tree_23& operator*=(const std::pair<key, val>& o) { one<key, val>* p = search(top, o.first);
+    if (!p) throw t23_exep(std::string("Key not found (in function operator*= tree_23)."), 0); edit(o.first, o.second); return *this; }
     virtual tree_23& operator-=(const key& k) { top = remove(top, k); return *this; }
-    virtual val& operator[](const key& k) { one<key, val>* p = search(top, k); if (!p) throw t23_exep(std::string("Key not found."), 0); return *p->vals[p->keys[0] >= k ? 0 : 1]; }
+    virtual val operator[](const key& k) {
+        one<key, val>* p = search(top, k);
+        if (!p)
+            throw t23_exep(std::string("Key not found (in function operator[] tree_23)."), 0);
+        return *p->vals[k > p->keys[0] ? 1 : 0]; }
 
     void Show()
     {
@@ -1386,7 +1381,7 @@ one<key, val>* tree_23<key, val>::insert(one<key, val>* p, const key& k, const v
     if (!p) return new one<key, val>(k, v); // если дерево пусто, то создаем первую 2-3-вершину (корень)
 
     if(k == p->k)
-        throw t23_exep(std::string("Key already exist."), 1);
+        throw t23_exep(std::string("Key already exist (in function insert tree_23)."), 1);
 
     if (p->is_leaf())
         p->insert_to_node(k, v);
@@ -1462,7 +1457,7 @@ one<key, val>* tree_23<key, val>::remove(one<key, val>* p, const key& k) { // Уд
     one<key, val>* item = search(p, k); // Ищем узел, где находится ключ k
 
     if (!item) 
-        throw t23_exep(std::string("Key not found."), 0);
+        throw t23_exep(std::string("Key not found (in function remove tree_23)."), 0);
 
     one<key, val>* min = nullptr;
     if (item->keys[0] == k) 
@@ -1763,14 +1758,9 @@ private:
         return true;
     }
 
-    //void tr_copy(const tree_types type, one<key, val>* node, base_tree<key, val>* tree);
-    //void trace_copy(base_tree<key, val>* tree);
-
-    //void trace23(one<key, val>* node, tree_23<key, val>* tr);
-    //void trace(one<key, val>* node, bin_tree<key, val>* tr);
 public:
     relation(){}
-    ~relation(){}
+    ~relation() {}// { auto it = arr.begin(); for (; arr.size() != 0;) remIndex(it->first); }
 
     relation& addIndex( const tree_types type, Compare<key>* comp, std::string index);
     relation& remIndex(const std::string& index);
@@ -1810,9 +1800,9 @@ template<class key, class val>
 relation<key, val>& relation<key, val>::addIndex(const tree_types type, Compare<key>* comp, std::string index)
 {
     if (!checkIndex(index))
-        throw relation_exception(index+std::string(" - this is wrong input index-key."), -2);
+        throw relation_exception(std::string(index+std::string(" - this is wrong input index-key (in function addIndex relation).")), -2);
     if(arr.find(index)!=arr.end())
-        throw relation_exception(index+std::string(" - this index-key already exist."), -1);
+        throw relation_exception(std::string(index+std::string(" - this index-key already exist (in function addIndex relation).")), -1);
 
     base_tree<key, val>* tree = nullptr;
 
@@ -1846,7 +1836,7 @@ relation<key, val>& relation<key, val>::remIndex(const std::string& index)
     auto it = arr.find(index);
 
     if(it==arr.end())
-        throw relation_exception(index + std::string(" - this index-key not found."), -3);
+        throw relation_exception(std::string(index + std::string(" - this index-key not found (in function remIndex relation).")), -3);
 
     it->second->delete_tree();
     arr.erase(it);
@@ -1860,7 +1850,7 @@ template <class key, class val>
 relation<key, val>& relation<key, val>::addData(const key& k, const val& v)
 {
     auto it = arr.begin();
-    for (; it != arr.end(); it++)//std::map::iterator)
+    for (; it != arr.end(); it++)
         *(it->second)+= std::make_pair(k, v);
 
     return *this;
@@ -1887,7 +1877,7 @@ val relation<key, val>::findData(const key& k, const std::string& index)
     auto it = arr.find(index);
 
     if(it == arr.end())
-        throw relation_exception(index + std::string(" - this index-key not found."), -3);
+        throw relation_exception(std::string(index + std::string(" - this index-key not found (in function findData relation).")), -3);
 
     return (*(it->second))[k];
 }
